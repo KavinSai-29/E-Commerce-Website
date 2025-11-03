@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Cart | E-Shop</title>
+  <link rel="stylesheet" href="ecomer.css">
+  <style>
+    /* === CART PAGE STYLES === */
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f2f2f2;
+    }
+
+    .cart-container {
+      width: 90%;
+      max-width: 1000px;
+      margin: 120px auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .cart-container h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #088178;
+    }
+
+    .cart-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #ddd;
+      padding: 15px 0;
+    }
+
+    .cart-item:last-child {
+      border-bottom: none;
+    }
+
+    .cart-item img {
+      width: 90px;
+      height: 90px;
+      border-radius: 10px;
+      object-fit: cover;
+    }
+
+    .cart-item h4 {
+      margin: 0;
+      color: #333;
+      font-size: 1rem;
+    }
+
+    .cart-item h5 {
+      margin: 5px 0 0;
+      color: #088178;
+      font-size: 0.9rem;
+    }
+
+    .cart-item button {
+      background: #ff4444;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 15px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease-in-out;
+    }
+
+    .cart-item button:hover {
+      background: #e63939;
+    }
+
+    .total {
+      text-align: right;
+      font-size: 1.3rem;
+      font-weight: bold;
+      margin-top: 25px;
+      color: #333;
+    }
+
+    #empty {
+      text-align: center;
+      margin-top: 80px;
+      font-size: 1.2rem;
+      color: #555;
+    }
+
+    #checkoutBtn {
+      display: block;
+      margin: 40px auto 10px;
+      padding: 12px 25px;
+      background-color: #088178;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.3s ease-in-out;
+    }
+
+    #checkoutBtn:hover {
+      background-color: #06685f;
+    }
+
+    /* === HEADER FIX === */
+    #header {
+      background-color: #e3e6f3;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    #header .logo {
+      width: 120px;
+    }
+
+    #navbar li a.active {
+      color: #088178;
+    }
+
+    /* === FOOTER === */
+    footer {
+      margin-top: 60px;
+      background-color: #e3e6f3;
+      padding: 40px 20px;
+      text-align: center;
+      color: #333;
+      font-size: 0.9rem;
+    }
+
+    footer p {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- === HEADER === -->
+  <section id="header">
+    <a href="index.html"><img src="images/logo.png" class="logo" alt=""></a>
+    <div>
+      <ul id="navbar">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="cart.html" class="active">Cart</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- === CART BODY === -->
+  <section class="cart-container">
+    <h2>Your Shopping Cart</h2>
+    <div id="cartItems"></div>
+    <div id="total" class="total"></div>
+    <p id="empty" style="display:none;">🛒 Your cart is empty!</p>
+    <button id="checkoutBtn" style="display:none;">Checkout</button>
+  </section>
+
+  <!-- === FOOTER === -->
+  <footer>
+    <p>Thank you for shopping with us 💚</p>
+    <p>&copy; 2025 E-Shop. All rights reserved.</p>
+  </footer>
+  <script type="module">
+  // --- Import Firebase ---
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // --- Your Firebase Config (replace with yours) ---
+  const firebaseConfig = {
+  apiKey: "AIzaSyCYfSuNM0naytgsVokHJNStlgiwnPbtRag",
+  authDomain: "e-commerce-website-f8256.firebaseapp.com",
+  projectId: "e-commerce-website-f8256",
+  storageBucket: "e-commerce-website-f8256.firebasestorage.app",
+  messagingSenderId: "785900719741",
+  appId: "1:785900719741:web:b73b13eb02097af8c22b14",
+  measurementId: "G-GQ56XGSKEB"
+};
+
+
+  // --- Initialize Firebase ---
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // --- Make Firestore available globally ---
+  window.db = db;
+  window.addDoc = addDoc;
+  window.collection = collection;
+  window.getDocs = getDocs;
+  window.deleteDoc = deleteDoc;
+  window.doc = doc;
+</script>
+
+  <!-- === CART SCRIPT === -->
+  <script>
+  let cart = JSON.parse(localStorage.getItem('cart')) || [];
+  const cartContainer = document.getElementById('cartItems');
+  const totalDisplay = document.getElementById('total');
+  const emptyMsg = document.getElementById('empty');
+  const checkoutBtn = document.getElementById('checkoutBtn');
+
+  async function saveCartToFirestore() {
+    try {
+      // Clear previous Firestore data (optional)
+      const querySnapshot = await window.getDocs(window.collection(window.db, "cartItems"));
+      querySnapshot.forEach(async (docSnap) => {
+        await window.deleteDoc(window.doc(window.db, "cartItems", docSnap.id));
+      });
+
+      // Add new cart data
+      for (let item of cart) {
+        await window.addDoc(window.collection(window.db, "cartItems"), item);
+      }
+
+      console.log("🟢 Cart saved to Firestore successfully!");
+    } catch (error) {
+      console.error("❌ Error saving cart:", error);
+    }
+  }
+
+  function renderCart() {
+    cartContainer.innerHTML = '';
+    if (cart.length === 0) {
+      emptyMsg.style.display = 'block';
+      totalDisplay.innerHTML = '';
+      checkoutBtn.style.display = 'none';
+      return;
+    }
+
+    emptyMsg.style.display = 'none';
+    checkoutBtn.style.display = 'block';
+
+    let total = 0;
+
+    cart.forEach((item, index) => {
+      const itemElement = document.createElement('div');
+      itemElement.classList.add('cart-item');
+      itemElement.innerHTML = `
+        <img src="${item.img}" alt="${item.name}">
+        <div>
+          <h4>${item.name}</h4>
+          <h5>${item.price}</h5>
+        </div>
+        <button onclick="removeItem(${index})">Remove</button>
+      `;
+      cartContainer.appendChild(itemElement);
+
+      total += parseFloat(item.price.replace(/[₹,]/g, '')) || 0;
+    });
+
+    totalDisplay.innerHTML = 'Total: ₹' + total.toFixed(2);
+  }
+
+  function removeItem(index) {
+    cart.splice(index, 1);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    renderCart();
+    saveCartToFirestore(); // save updated cart
+  }
+
+  checkoutBtn.addEventListener('click', async () => {
+    alert("✅ Order placed successfully!");
+    await saveCartToFirestore(); // Save final cart before clearing
+    localStorage.removeItem('cart');
+    renderCart();
+  });
+
+  renderCart();
+  saveCartToFirestore(); // Initial sync on load
+</script>
+
+</body>
+</html>
